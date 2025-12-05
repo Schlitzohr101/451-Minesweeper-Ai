@@ -1,3 +1,6 @@
+#William Murray
+#017540586
+
 import itertools
 import random
 
@@ -290,7 +293,14 @@ class MinesweeperAI():
         This function may use the knowledge in self.mines, self.safes
         and self.moves_made, but should not modify any of those values.
         """
-        raise NotImplementedError
+        # Find safe cells that haven't been clicked yet
+        available_safes = self.safes - self.moves_made
+        
+        if available_safes:
+            # Return any safe move
+            return available_safes.pop()
+        
+        return None
 
     def make_random_move(self):
         """
@@ -299,4 +309,17 @@ class MinesweeperAI():
             1) have not already been chosen, and
             2) are not known to be mines
         """
-        raise NotImplementedError
+        # Get all possible cells
+        all_cells = []
+        for i in range(self.height):
+            for j in range(self.width):
+                cell = (i, j)
+                # Only include cells that haven't been chosen and aren't known mines
+                if cell not in self.moves_made and cell not in self.mines:
+                    all_cells.append(cell)
+        
+        # Return a random cell if available
+        if all_cells:
+            return random.choice(all_cells)
+        
+        return None
