@@ -194,7 +194,92 @@ class MinesweeperAI():
             5) add any new sentences to the AI's knowledge base
                if they can be inferred from existing knowledge
         """
-        raise NotImplementedError
+        # 1) Mark the cell as a move that has been made
+        self.moves_made.add(cell)
+
+        # 2) Mark the cell as safe
+        self.mark_safe(cell)
+        
+        neighbors = set()
+        cell_row, cell_column = cell
+
+        for row_offset in range(-1, 2):
+            for col_offset in range(-1, 2):
+                
+                # Skip the cell itself (no offset)
+                if row_offset == 0 and col_offset == 0:
+                    continue
+                
+                neighbor_row = cell_row + row_offset
+                neighbor_col = cell_column + col_offset
+
+                # Check if neighbor is within bounds
+                if 0 <= neighbor_row < self.height and 0 <= neighbor_col < self.width:
+                    neighbor_cell = (neighbor_row, neighbor_col)
+                    
+                    # Only include neighbors that are not already known to be safe or mines
+                    if neighbor_cell not in self.safes and neighbor_cell not in self.mines:
+                        neighbors.add(neighbor_cell)
+                    
+                    # If neighbor is known to be a mine, decrease the count
+                    elif neighbor_cell in self.mines:
+                        count -= 1
+                # Add the new sentence if it has cells
+        if len(neighbors) > 0:
+            new_sentence = Sentence(neighbors, count)
+            self.knowledge.append(new_sentence)
+
+        # 4) Mark any additional cells as safe or as mines
+        # Iteratively check knowledge base for new inferences
+        knowledge_changed = True
+        while knowledge_changed:
+            knowledge_changed = False
+
+            # Check each sentence for known mines or safes
+            for sentence in self.knowledge:
+                # Get known mines and safes from this sentence
+                known_mines = sentence.known_mines()
+                known_safes = sentence.known_safes()
+
+                # Mark any new mines
+                if known_mines:
+                    for mine in known_mines.copy():
+                        if mine not in self.mines:
+                            self.mark_mine(mine)
+                            knowledge_changed = True
+
+                # Mark any new safes
+                if known_safes:
+                    for safe in known_safes.copy():
+                        if safe not in self.safes:
+                            self.mark_safe(safe)
+                            knowledge_changed = True
+
+            # 5) Add any new sentences using subset inference
+            new_sentences = []
+            for s1 in self.knowledge:
+                for s2 in self.knowledge:
+                    # Skip if same sentence or either is empty
+                    if s1 == s2 or len(s1.cells) == 0 or len(s2.cells) == 0:
+                        continue
+
+                    # If s1 is a subset of s2, infer new sentence
+                    if s1.cells.issubset(s2.cells):
+                        new_cells = s2.cells - s1.cells
+                        new_count = s2.count - s1.count
+                        
+                        # Create new sentence if it's not empty and not already in knowledge
+                        if len(new_cells) > 0:
+                            new_sentence = Sentence(new_cells, new_count)
+                            if new_sentence not in self.knowledge and new_sentence not in new_sentences:
+                                new_sentences.append(new_sentence)
+                                knowledge_changed = True
+
+            # Add new sentences to knowledge base
+            self.knowledge.extend(new_sentences)
+
+            # Remove empty sentences
+            self.knowledge = [s for s in self.knowledge if len(s.cells) > 0]
 
     def make_safe_move(self):
         """
